@@ -1,0 +1,37 @@
+{
+	"name": "frontend",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"start": "webpack serve --mode development",
+		"build": "webpack --mode production",
+		"lint": "eslint src"
+	},
+	"dependencies": {
+		"@ant-design/icons": "^5.2.0",
+		"@monaco-editor/react": "^4.7.0",
+		"antd": "^5.12.0",
+		"axios": "^1.13.2",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.2",
+		"@types/node": "^22.19.3",
+		"@types/react": "^18.2.0",
+		"@types/react-dom": "^18.2.0",
+		"css-loader": "^6.8.0",
+		"eslint": "^9.39.2",
+		"eslint-plugin-react": "^7.37.5",
+		"eslint-plugin-react-hooks": "^7.0.1",
+		"globals": "^16.5.0",
+		"html-webpack-plugin": "^5.6.0",
+		"style-loader": "^3.3.0",
+		"ts-loader": "^9.5.0",
+		"typescript": "^5.3.0",
+		"typescript-eslint": "^8.52.0",
+		"webpack": "^5.89.0",
+		"webpack-cli": "^5.1.0",
+		"webpack-dev-server": "^4.15.0"
+	}
+}
