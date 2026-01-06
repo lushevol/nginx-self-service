@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { NginxParserService } from './nginx-parser.service';
 import { AzureDevOpsService } from './azure-devops.service';
+import { ChangeRequestService } from '../change-request/change-request.service';
 import { PolicyValidator } from './validators/policy.validator';
 import { ScopeValidator } from './validators/scope.validator';
 import { SyntaxValidator } from './validators/syntax.validator';
@@ -13,7 +14,17 @@ export class NginxConfigService {
     private readonly policyValidator: PolicyValidator,
     private readonly scopeValidator: ScopeValidator,
     private readonly syntaxValidator: SyntaxValidator,
+    private readonly changeRequestService: ChangeRequestService,
   ) {}
+
+  async validateSplitConfig(
+    team: string,
+    upstreams: string,
+    locations: string,
+  ) {
+    const combined = `${upstreams}\n${locations}`;
+    return this.validateConfig(team, combined);
+  }
 
   async validateConfig(team: string, content: string) {
     // 1. Syntax Check
@@ -38,6 +49,35 @@ export class NginxConfigService {
     return { valid: true, parsed: { locations } };
   }
 
+  async submitConfig(
+    team: string,
+    env: string,
+    upstreams: string,
+    locations: string,
+  ) {
+    // 1. Validate
+    await this.validateSplitConfig(team, upstreams, locations);
+
+    // 2. Save pending request
+    const id = await this.changeRequestService.create(
+      team,
+      env,
+      upstreams,
+      locations,
+    );
+
+    return {
+      changeId: id,
+      status: 'PENDING',
+      message: 'Configuration submitted for processing',
+    };
+  }
+
+  async getPendingRequests(team: string) {
+    return this.changeRequestService.findAllByTeam(team);
+  }
+
+  // Legacy method kept for reference or direct usage if needed
   async createPullRequest(team: string, env: string, content: string) {
     // Re-validate to be safe
     await this.validateConfig(team, content);

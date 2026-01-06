@@ -28,24 +28,17 @@ import {
 
 interface Props {
   value: string;
-  onChange: (val: string) => void;
-  team: string; // [3. new added configs template not reflect current team]
+  onChange: (value: string) => void;
+  team: string;
 }
 
-interface Directive {
-  key: string;
-  value: string;
-}
-
-interface Location {
-  path: string;
-  directives: Directive[];
-}
-
-interface Upstream {
-  name: string;
-  servers: string[];
-}
+import {
+  parseConfig,
+  generateUpstreamsBlock,
+  generateLocationsBlock,
+  type Location,
+  type Upstream,
+} from "../utils/nginx";
 
 export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   const [mode, setMode] = useState<"raw" | "wizard">("wizard");
@@ -89,6 +82,7 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   useEffect(() => {
     if (mode === "wizard") {
       const { locs, upstrs } = parseConfig(value);
+      // eslint-disable-next-line
       setLocations(locs);
       setUpstreams(upstrs);
     }
@@ -100,8 +94,10 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   ) => {
     setLocations(newLocations);
     setUpstreams(newUpstreams);
-    const newText = generateConfig(newLocations, newUpstreams);
-    onChange(newText);
+    const uStr = generateUpstreamsBlock(newUpstreams);
+    const lStr = generateLocationsBlock(newLocations);
+    const fullConfig = uStr && lStr ? `${uStr}\n\n${lStr}` : uStr || lStr;
+    onChange(fullConfig);
   };
 
   const handleEditorChange = (val: string | undefined) => {
@@ -591,64 +587,4 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
 };
 
 // --- Helpers ---
-function parseConfig(text: string): { locs: Location[]; upstrs: Upstream[] } {
-  const locs: Location[] = [];
-  const upstrs: Upstream[] = [];
-
-  // Parse Upstreams
-  const upstreamRegex = /upstream\s+([^{]+)\s*{([^}]*)}/g;
-  let match;
-  while ((match = upstreamRegex.exec(text)) !== null) {
-    const name = match[1].trim();
-    const body = match[2].trim();
-    const servers = body
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.startsWith("server"))
-      .map((s) => s.replace("server", "").trim());
-    upstrs.push({ name, servers });
-  }
-
-  // Parse Locations (Simplified)
-  const locRegex = /location\s+([^{]+)\s*{([^}]*)}/g;
-  while ((match = locRegex.exec(text)) !== null) {
-    const path = match[1].trim();
-    const body = match[2].trim();
-    const lines = body
-      .split(";")
-      .map((l) => l.trim())
-      .filter((l) => l);
-    const directives: Directive[] = [];
-    for (const line of lines) {
-      const parts = line.split(/\s+/);
-      if (parts.length >= 2) {
-        const k = parts[0];
-        const v = parts.slice(1).join(" ");
-        directives.push({ key: k, value: v });
-      }
-    }
-    locs.push({ path, directives });
-  }
-
-  return { locs, upstrs };
-}
-
-function generateConfig(locs: Location[], upstrs: Upstream[]): string {
-  const upstreamBlock = upstrs
-    .map(
-      (u) =>
-        `upstream ${u.name} {\n${u.servers.map((s) => `    server ${s};`).join("\n")}\n}`
-    )
-    .join("\n\n");
-  const locationBlock = locs
-    .map(
-      (l) =>
-        `location ${l.path} {\n${l.directives.map((d) => `    ${d.key} ${d.value};`).join("\n")}\n}`
-    )
-    .join("\n\n");
-
-  if (upstreamBlock && locationBlock)
-    return `${upstreamBlock}\n\n${locationBlock}`;
-  if (upstreamBlock) return upstreamBlock;
-  return locationBlock;
-}
+// --- Helpers moved to utils/nginx.ts ---

@@ -40,6 +40,15 @@ export class AzureDevOpsService {
     return this.gitApi;
   }
 
+  async checkHealth(): Promise<boolean> {
+    try {
+      await this.getGitApi();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async getConfigs(env: string, team: string): Promise<string> {
     const repoId = process.env.ADO_REPO_ID || 'nginx-repo';
     const versionDescriptor = {

@@ -35,3 +35,14 @@ When the background worker runs
 Then it should retry connectivity check
 And NOT fail the request immediately
 And wait for the next iteration
+
+### Requirement: Query Pending Changes
+
+The API SHALL allow users to query valid pending change requests, filtered by their team.
+
+#### Scenario: User queries pending requests
+
+Given multiple pending change requests exist for different teams
+When a user queries pending requests with their team ID
+Then the system should return only requests belonging to that team
+And exclude requests from other teams

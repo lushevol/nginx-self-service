@@ -1,7 +1,8 @@
-- [ ] Create `ChangeRequest` entity and migration
-- [ ] Implement `ChangeRequestService` to save pending requests
-- [ ] Update `ConfigController` to use `ChangeRequestService`
-- [ ] Implement `BackgroundWorker` for processing queue
-- [ ] Implement `AdoConnectivityCheck` loop
-- [ ] Refactor `ConfigEditor` to send split payload
-- [ ] Update `NginxConfigService` to handle split payload validation
+- [x] Create `ChangeRequest` entity and migration
+- [x] Implement `ChangeRequestService` to save pending requests
+- [x] Implement `GET /config/pending` endpoint with team filter
+- [x] Update `ConfigController` to use `ChangeRequestService`
+- [x] Implement `BackgroundWorker` for processing queue
+- [x] Implement `AdoConnectivityCheck` loop
+- [x] Refactor `ConfigEditor` to send split payload
+- [x] Update `NginxConfigService` to handle split payload validation

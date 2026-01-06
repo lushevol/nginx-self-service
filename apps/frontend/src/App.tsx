@@ -3,6 +3,11 @@ import { Layout, Typography, Button, message, Alert, Modal } from "antd";
 import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";
 import axios from "axios";
+import {
+  parseConfig,
+  generateUpstreamsBlock,
+  generateLocationsBlock,
+} from "./utils/nginx";
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -14,12 +19,26 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [prUrl, setPrUrl] = useState<string | null>(null);
 
+  interface ChangeRequest {
+    id: string;
+    team: string;
+    environment: string;
+    status: string;
+    prId?: string;
+    createdAt: number;
+  }
+
+  // Pending Requests State
+  const [pendingRequests, setPendingRequests] = useState<ChangeRequest[]>([]);
+
+  // Helpers
   // [5. when switch env and team, should pop up alert then initial from data source]
   const fetchConfig = async (t: string, e: string) => {
     try {
       setLoading(true);
       const res = await axios.get(`/api/nginx/${t}/${e}`);
-      setConfig(res.data.content);
+      const content = res.data.content;
+      setConfig(content); // full config for editor
       message.success(`Loaded config for ${t} [${e}]`);
     } catch (err) {
       message.error("Failed to load config");
@@ -28,10 +47,24 @@ const App = () => {
     }
   };
 
+  const fetchPending = async (t: string) => {
+    try {
+      const res = await axios.get(`/api/nginx/${t}/pending`);
+      setPendingRequests(res.data);
+    } catch (e) {
+      console.error("Failed to load pending requests");
+    }
+  };
+
   useEffect(() => {
     fetchConfig(team, env);
+    fetchPending(team);
+
+    // Poll for pending updates every 5s
+    const interval = setInterval(() => fetchPending(team), 5000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Initial load
+  }, []); // Initial load - team/env changes handled by handlers
 
   const handleTeamChange = (newTeam: string) => {
     Modal.confirm({
@@ -40,6 +73,7 @@ const App = () => {
       onOk: () => {
         setTeam(newTeam);
         fetchConfig(newTeam, env);
+        fetchPending(newTeam);
       },
     });
   };
@@ -59,8 +93,10 @@ const App = () => {
     try {
       setLoading(true);
       setPrUrl(null);
+      const { locs, upstrs } = parseConfig(config);
       await axios.post(`/api/nginx/${team}/validate`, {
-        content: config,
+        upstreams: generateUpstreamsBlock(upstrs),
+        locations: generateLocationsBlock(locs),
       });
       message.success("Configuration is valid!");
     } catch (e) {
@@ -75,11 +111,14 @@ const App = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      const { locs, upstrs } = parseConfig(config);
       const res = await axios.post(`/api/nginx/${team}/submit/${env}`, {
-        content: config,
+        upstreams: generateUpstreamsBlock(upstrs),
+        locations: generateLocationsBlock(locs),
       });
-      setPrUrl(res.data.prUrl);
-      message.success("PR Created Successfully!");
+      // response: { changeId, status, message }
+      message.success(res.data.message);
+      fetchPending(team); // refresh pending list
     } catch {
       message.error("Submission Failed");
     } finally {
@@ -102,6 +141,35 @@ const App = () => {
           setEnv={handleEnvChange}
         />
 
+        {/* Pending Requests Alert */}
+        {pendingRequests.length > 0 && (
+          <Alert
+            message={`Pending Changes: ${pendingRequests.length}`}
+            description={
+              <ul style={{ paddingLeft: 20, margin: 0 }}>
+                {pendingRequests.map((req) => (
+                  <li key={req.id}>
+                    {req.status} - {new Date(req.createdAt).toLocaleString()}
+                    {req.prId && (
+                      <a
+                        href={`https://dev.azure.com/myorg/nginx-repo/_git/repo/pullrequest/${req.prId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ marginLeft: 10 }}
+                      >
+                        PR #{req.prId}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 20 }}
+          />
+        )}
+
         <ConfigEditor value={config} onChange={setConfig} team={team} />
 
         <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
@@ -114,7 +182,7 @@ const App = () => {
             loading={loading}
             disabled={!config}
           >
-            Submit PR
+            Submit Change Request
           </Button>
         </div>
 
