@@ -45,7 +45,7 @@ export class NginxConfigService {
     // Submit to ADO
     const prId = await this.adoService.createPR(env, team, content);
     return {
-      prUrl: `https://dev.azure.com/org/project/_git/repo/pullrequest/${prId}`,
+      prUrl: `${process.env.ADO_ORG_URL}/${process.env.ADO_REPO_ID}/_git/repo/pullrequest/${prId}`,
     };
   }
 
