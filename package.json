@@ -5,6 +5,7 @@
 	"scripts": {
 		"build": "turbo run build",
 		"start": "turbo run start",
+		"stop": "lsof -ti:3000,4000 | xargs kill -9",
 		"lint": "turbo run lint",
 		"test": "turbo run test"
 	},

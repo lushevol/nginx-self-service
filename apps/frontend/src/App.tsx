@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Layout, Typography, Button, message, Alert, Modal } from "antd";
 import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";

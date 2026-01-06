@@ -89,7 +89,6 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   useEffect(() => {
     if (mode === "wizard") {
       const { locs, upstrs } = parseConfig(value);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       setLocations(locs);
       setUpstreams(upstrs);
     }

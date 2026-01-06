@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { NginxConfigModule } from './nginx-config/nginx-config.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [NginxConfigModule],
+  imports: [NginxConfigModule, ConfigModule.forRoot()],
   controllers: [],
   providers: [],
 })
