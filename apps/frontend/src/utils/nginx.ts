@@ -90,3 +90,13 @@ export function extractLocationsRaw(text: string): string {
   const matches = text.match(locRegex);
   return matches ? matches.join("\n\n") : "";
 }
+
+export function splitConfig(text: string): {
+  upstreams: string;
+  locations: string;
+} {
+  return {
+    upstreams: extractUpstreamsRaw(text),
+    locations: extractLocationsRaw(text),
+  };
+}

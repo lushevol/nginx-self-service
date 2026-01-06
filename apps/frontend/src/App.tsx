@@ -3,11 +3,7 @@ import { Layout, Typography, Button, message, Alert, Modal } from "antd";
 import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";
 import axios from "axios";
-import {
-  parseConfig,
-  generateUpstreamsBlock,
-  generateLocationsBlock,
-} from "./utils/nginx";
+import { parseConfig, splitConfig } from "./utils/nginx";
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -94,10 +90,11 @@ const App = () => {
     try {
       setLoading(true);
       setPrUrl(null);
-      const { locs, upstrs } = parseConfig(config);
+      setPrUrl(null);
+      const { upstreams, locations } = splitConfig(config);
       await axios.post(`/api/nginx/${team}/validate`, {
-        upstreams: generateUpstreamsBlock(upstrs),
-        locations: generateLocationsBlock(locs),
+        upstreams,
+        locations,
       });
       message.success("Configuration is valid!");
     } catch (e) {
@@ -112,10 +109,11 @@ const App = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      const { locs, upstrs } = parseConfig(config);
+      setLoading(true);
+      const { upstreams, locations } = splitConfig(config);
       const res = await axios.post(`/api/nginx/${team}/submit/${env}`, {
-        upstreams: generateUpstreamsBlock(upstrs),
-        locations: generateLocationsBlock(locs),
+        upstreams,
+        locations,
       });
       // response: { changeId, status, message }
       message.success(res.data.message);
