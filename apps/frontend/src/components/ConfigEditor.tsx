@@ -44,6 +44,8 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
             [/include\s+/, "keyword"],
             [/rewrite\s+/, "keyword"],
             [/proxy_set_header\s+/, "keyword"],
+            [/proxy_redirect\s+/, "keyword"],
+            [/add_header\s+/, "keyword"],
             [/[a-z_]+/, "identifier"],
             [/\$/, "variable"],
             [/[{}]/, "delimiter"],
@@ -131,6 +133,31 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
         />
       ) : (
         <div style={{ minHeight: 400 }}>
+          <List style={{ marginBottom: 16 }}>
+            <List.Item>
+              <Typography.Text type="secondary">
+                <strong style={{ display: "block", marginBottom: 4 }}>
+                  Configuration Tips:
+                </strong>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  <li>
+                    Use <code>rewrite</code> to strip prefixes before passing to
+                    backend.
+                  </li>
+                  <li>
+                    Standard headers (<code>X-Real-IP</code>,{" "}
+                    <code>X-Forwarded-For</code>) are included by default in
+                    templates.
+                  </li>
+                  <li>
+                    Ensure Upstream names match the <code>proxy_pass</code>{" "}
+                    destination.
+                  </li>
+                </ul>
+              </Typography.Text>
+            </List.Item>
+          </List>
+
           <Typography.Title level={5}>Upstreams</Typography.Title>
           {upstreams.map((u, idx) => (
             <Card key={idx} size="small" style={{ marginBottom: 8 }}>
@@ -173,7 +200,10 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
             onClick={() => {
               updateFromForm(locations, [
                 ...upstreams,
-                { name: `${team}_backend`, servers: ["127.0.0.1:3000"] },
+                {
+                  name: `${team}_backend_service`,
+                  servers: ["your_backend_service:8080"],
+                },
               ]);
             }}
             block
@@ -256,29 +286,104 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
               </Space>
             </Card>
           ))}
-          <Button
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              // [3. new added configs template not reflect current team]
-              updateFromForm(
-                [
-                  ...locations,
-                  {
-                    path: `/api/${team}/new`,
-                    directives: [
-                      { key: "proxy_pass", value: `http://${team}_backend` },
-                    ],
-                  },
-                ],
-                upstreams
-              );
-            }}
-            block
-            style={{ marginTop: 16 }}
-          >
-            Add Location Block
-          </Button>
+          <Space style={{ width: "100%" }}>
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                updateFromForm(
+                  [
+                    ...locations,
+                    {
+                      path: `/api/${team}/`,
+                      directives: [
+                        {
+                          key: "rewrite",
+                          value: `^/api/${team}/(.*)$ /$1 break`,
+                        },
+                        { key: "proxy_redirect", value: "off" },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Real-IP $remote_addr",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-Proto http",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-For $remote_addr",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-Host $remote_addr",
+                        },
+                        {
+                          key: "proxy_pass",
+                          value: `https://${team}_backend_service`,
+                        },
+                      ],
+                    },
+                  ],
+                  upstreams
+                );
+              }}
+              block
+              style={{ marginTop: 16 }}
+            >
+              Add API Location
+            </Button>
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                updateFromForm(
+                  [
+                    ...locations,
+                    {
+                      path: `/static/${team}/`,
+                      directives: [
+                        {
+                          key: "rewrite",
+                          value: `^/static/${team}/(.*)$ /$1 break`,
+                        },
+                        { key: "proxy_redirect", value: "off" },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Real-IP $remote_addr",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-Proto http",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-For $remote_addr",
+                        },
+                        {
+                          key: "proxy_set_header",
+                          value: "X-Forwarded-Host $remote_addr",
+                        },
+                        {
+                          key: "add_header",
+                          value: 'Cache-Control "no-cache"',
+                        },
+                        {
+                          key: "proxy_pass",
+                          value: `https://${team}_static_server`,
+                        },
+                      ],
+                    },
+                  ],
+                  upstreams
+                );
+              }}
+              block
+              style={{ marginTop: 16 }}
+            >
+              Add Static Location
+            </Button>
+          </Space>
         </div>
       )}
     </Card>
