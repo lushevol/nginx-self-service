@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
-import { Input, Button, Tabs, Space, Card, List, Typography } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Input,
+  Button,
+  Tabs,
+  Space,
+  Card,
+  List,
+  Typography,
+  Collapse,
+  Tag,
+  Tooltip,
+  Divider,
+} from "antd";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  GlobalOutlined,
+  FolderOpenOutlined,
+  ThunderboltOutlined,
+  SettingOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  FileTextOutlined,
+  SaveOutlined,
+} from "@ant-design/icons";
 
 interface Props {
   value: string;
@@ -66,6 +89,7 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   useEffect(() => {
     if (mode === "wizard") {
       const { locs, upstrs } = parseConfig(value);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setLocations(locs);
       setUpstreams(upstrs);
     }
@@ -143,17 +167,238 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
     updateFromForm(newLocs, upstreams);
   };
 
+  // UI Components
+  const renderUpstreams = () => (
+    <Collapse
+      ghost
+      defaultActiveKey={["0"]}
+      items={upstreams.map((u, idx) => ({
+        key: idx.toString(),
+        label: (
+          <Space>
+            <GlobalOutlined style={{ color: "#1890ff" }} />
+            <span style={{ fontWeight: 500 }}>{u.name}</span>
+            <Tag color="geekblue">{u.servers.length} servers</Tag>
+          </Space>
+        ),
+        extra: (
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              const newUps = upstreams.filter((_, i) => i !== idx);
+              updateFromForm(locations, newUps);
+            }}
+          />
+        ),
+        children: (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Input
+              addonBefore="Name"
+              value={u.name}
+              onChange={(e) => {
+                const newUps = [...upstreams];
+                newUps[idx].name = e.target.value;
+                updateFromForm(locations, newUps);
+              }}
+            />
+            <Input.TextArea
+              rows={3}
+              value={u.servers.join("\n")}
+              onChange={(e) => {
+                const newUps = [...upstreams];
+                newUps[idx].servers = e.target.value.split("\n");
+                updateFromForm(locations, newUps);
+              }}
+              placeholder="server 10.0.0.1:8080;"
+            />
+          </Space>
+        ),
+      }))}
+    />
+  );
+
+  const renderLocations = () => (
+    <Collapse
+      defaultActiveKey={["0"]}
+      items={locations.map((loc, idx) => ({
+        key: idx.toString(),
+        label: (
+          <Space>
+            <FolderOpenOutlined style={{ color: "#faad14" }} />
+            <span style={{ fontWeight: 500 }}>{loc.path}</span>
+            <Tag>{loc.directives.length} directives</Tag>
+          </Space>
+        ),
+        extra: (
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              const newLocs = locations.filter((_, i) => i !== idx);
+              updateFromForm(newLocs, upstreams);
+            }}
+          />
+        ),
+        children: (
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
+            <Input
+              addonBefore="Path"
+              value={loc.path}
+              onChange={(e) => {
+                const newLocs = [...locations];
+                newLocs[idx].path = e.target.value;
+                updateFromForm(newLocs, upstreams);
+              }}
+              prefix={<FolderOpenOutlined style={{ color: "#bfbfbf" }} />}
+            />
+
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Typography.Text strong>
+                  <SettingOutlined /> Directives
+                </Typography.Text>
+                <Space size={2}>
+                  {!loc.directives.some((d) =>
+                    d.value.toLowerCase().includes("upgrade")
+                  ) && (
+                    <Tooltip title="Add Upgrade & Connection headers">
+                      <Button
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        onClick={() => addWebsocketSupport(idx)}
+                      >
+                        WS
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {!loc.directives.some(
+                    (d) => d.key === "client_max_body_size"
+                  ) && (
+                    <Tooltip title="Add client_max_body_size 10m">
+                      <Button
+                        size="small"
+                        icon={<SaveOutlined />}
+                        onClick={() => addBodySizeLimit(idx)}
+                      >
+                        Body
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {!loc.directives.some((d) => d.key.includes("_timeout")) && (
+                    <Tooltip title="Add standard timeouts (60s)">
+                      <Button
+                        size="small"
+                        icon={<SettingOutlined />}
+                        onClick={() => addTimeouts(idx)}
+                      >
+                        Timeout
+                      </Button>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Add custom directive">
+                    <Button
+                      type="primary"
+                      size="small"
+                      ghost
+                      icon={<PlusOutlined />}
+                      onClick={() => addDirective(idx)}
+                    >
+                      Add
+                    </Button>
+                  </Tooltip>
+                </Space>
+              </div>
+
+              <List
+                size="small"
+                dataSource={loc.directives}
+                renderItem={(item, dIdx) => (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginBottom: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Input
+                      value={item.key}
+                      onChange={(e) =>
+                        updateDirective(idx, dIdx, e.target.value, item.value)
+                      }
+                      style={{ width: "40%" }}
+                      placeholder="Key"
+                    />
+                    <Input
+                      value={item.value}
+                      onChange={(e) =>
+                        updateDirective(idx, dIdx, item.key, e.target.value)
+                      }
+                      style={{ flex: 1 }}
+                      placeholder="Value"
+                    />
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeDirective(idx, dIdx)}
+                    />
+                  </div>
+                )}
+              />
+            </div>
+          </Space>
+        ),
+      }))}
+    />
+  );
+
   return (
     <Card
-      title="Configuration Editor"
+      title={
+        <Space>
+          <CodeOutlined />
+          <span>Nginx Configuration</span>
+        </Space>
+      }
+      bodyStyle={{ padding: 0 }}
       extra={
         <Tabs
+          type="card"
+          size="small"
           activeKey={mode}
           onChange={(k) => setMode(k as "raw" | "wizard")}
           items={[
-            { key: "wizard", label: "Wizard Mode" },
-            { key: "raw", label: "Raw Config" },
+            {
+              key: "wizard",
+              label: (
+                <span>
+                  <SettingOutlined /> Wizard
+                </span>
+              ),
+            },
+            {
+              key: "raw",
+              label: (
+                <span>
+                  <CodeOutlined /> Raw
+                </span>
+              ),
+            },
           ]}
+          style={{ marginBottom: -16 }} // Hack to align tabs with header
         />
       }
     >
@@ -164,72 +409,28 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
           value={value}
           onChange={handleEditorChange}
           theme="vs-dark"
+          options={{
+            minimap: { enabled: false },
+            padding: { top: 16 },
+          }}
         />
       ) : (
-        <div style={{ minHeight: 400 }}>
-          <List style={{ marginBottom: 16 }}>
-            <List.Item>
-              <Typography.Text type="secondary">
-                <strong style={{ display: "block", marginBottom: 4 }}>
-                  Configuration Tips:
-                </strong>
-                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                  <li>
-                    Use <code>rewrite</code> to strip prefixes before passing to
-                    backend.
-                  </li>
-                  <li>
-                    Standard headers (<code>X-Real-IP</code>,{" "}
-                    <code>X-Forwarded-For</code>) are included by default in
-                    templates.
-                  </li>
-                  <li>
-                    Ensure Upstream names match the <code>proxy_pass</code>{" "}
-                    destination.
-                  </li>
-                </ul>
-              </Typography.Text>
-            </List.Item>
-          </List>
-
-          <Typography.Title level={5}>Upstreams</Typography.Title>
-          {upstreams.map((u, idx) => (
-            <Card key={idx} size="small" style={{ marginBottom: 8 }}>
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <Input
-                  addonBefore="Upstream Name"
-                  value={u.name}
-                  onChange={(e) => {
-                    const newUps = [...upstreams];
-                    newUps[idx].name = e.target.value;
-                    updateFromForm(locations, newUps);
-                  }}
-                />
-                <Input.TextArea
-                  rows={2}
-                  value={u.servers.join("\n")}
-                  onChange={(e) => {
-                    const newUps = [...upstreams];
-                    newUps[idx].servers = e.target.value.split("\n");
-                    updateFromForm(locations, newUps);
-                  }}
-                  placeholder="server 10.0.0.1:8080;"
-                />
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => {
-                    const newUps = upstreams.filter((_, i) => i !== idx);
-                    updateFromForm(locations, newUps);
-                  }}
-                >
-                  Remove Upstream
-                </Button>
-              </Space>
-            </Card>
-          ))}
+        <div style={{ padding: 24 }}>
+          {/* Section: Upstreams */}
+          <Divider orientation="left">
+            <GlobalOutlined /> Upstreams
+          </Divider>
+          {upstreams.length === 0 && (
+            <div
+              style={{ textAlign: "center", marginBottom: 16, color: "#999" }}
+            >
+              No upstreams defined.
+            </div>
+          )}
+          {renderUpstreams()}
           <Button
             type="dashed"
+            block
             icon={<PlusOutlined />}
             onClick={() => {
               updateFromForm(locations, [
@@ -240,123 +441,30 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
                 },
               ]);
             }}
-            block
-            style={{ marginBottom: 24 }}
+            style={{ marginTop: 16 }}
           >
             Add Upstream
           </Button>
 
-          <Typography.Title level={5}>Locations</Typography.Title>
-          {locations.map((loc, idx) => (
-            <Card key={idx} size="small" style={{ marginBottom: 8 }}>
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <Input
-                  addonBefore="Location Path"
-                  value={loc.path}
-                  onChange={(e) => {
-                    const newLocs = [...locations];
-                    newLocs[idx].path = e.target.value;
-                    updateFromForm(newLocs, upstreams);
-                  }}
-                />
+          {/* Section: Locations */}
+          <Divider orientation="left">
+            <FolderOpenOutlined /> Locations
+          </Divider>
+          {locations.length === 0 && (
+            <div
+              style={{ textAlign: "center", marginBottom: 16, color: "#999" }}
+            >
+              No locations defined.
+            </div>
+          )}
+          {renderLocations()}
 
-                <List
-                  size="small"
-                  header={<div>Directives</div>}
-                  bordered
-                  dataSource={loc.directives}
-                  renderItem={(item, dIdx) => (
-                    <List.Item>
-                      <Space>
-                        <Input
-                          value={item.key}
-                          onChange={(e) =>
-                            updateDirective(
-                              idx,
-                              dIdx,
-                              e.target.value,
-                              item.value
-                            )
-                          }
-                          style={{ width: 150 }}
-                        />
-                        <Input
-                          value={item.value}
-                          onChange={(e) =>
-                            updateDirective(idx, dIdx, item.key, e.target.value)
-                          }
-                          style={{ width: 300 }}
-                        />
-                        <Button
-                          icon={<DeleteOutlined />}
-                          danger
-                          size="small"
-                          onClick={() => removeDirective(idx, dIdx)}
-                        />
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-                <Space>
-                  <Button
-                    type="dashed"
-                    size="small"
-                    icon={<PlusOutlined />}
-                    onClick={() => addDirective(idx)}
-                  >
-                    Add Directive
-                  </Button>
-                  {!loc.directives.some((d) =>
-                    d.value.toLowerCase().includes("upgrade")
-                  ) && (
-                    <Button
-                      type="dashed"
-                      size="small"
-                      onClick={() => addWebsocketSupport(idx)}
-                    >
-                      Add WebSocket Support
-                    </Button>
-                  )}
-                  {!loc.directives.some(
-                    (d) => d.key === "client_max_body_size"
-                  ) && (
-                    <Button
-                      type="dashed"
-                      size="small"
-                      onClick={() => addBodySizeLimit(idx)}
-                    >
-                      Add Body Size Limit
-                    </Button>
-                  )}
-                  {!loc.directives.some((d) => d.key.includes("_timeout")) && (
-                    <Button
-                      type="dashed"
-                      size="small"
-                      onClick={() => addTimeouts(idx)}
-                    >
-                      Add Timeouts
-                    </Button>
-                  )}
-                </Space>
-
-                <Button
-                  icon={<DeleteOutlined />}
-                  danger
-                  onClick={() => {
-                    const newLocs = locations.filter((_, i) => i !== idx);
-                    updateFromForm(newLocs, upstreams);
-                  }}
-                  style={{ marginTop: 8 }}
-                >
-                  Remove Location
-                </Button>
-              </Space>
-            </Card>
-          ))}
-          <Space style={{ width: "100%" }}>
+          <Space style={{ width: "100%", marginTop: 16 }}>
             <Button
-              type="dashed"
-              icon={<PlusOutlined />}
+              type="primary"
+              ghost
+              icon={<ApiOutlined />}
+              block
               onClick={() => {
                 updateFromForm(
                   [
@@ -395,14 +503,12 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
                   upstreams
                 );
               }}
-              block
-              style={{ marginTop: 16 }}
             >
-              Add API Location
+              Add API Route
             </Button>
             <Button
-              type="dashed"
-              icon={<PlusOutlined />}
+              icon={<FileTextOutlined />}
+              block
               onClick={() => {
                 updateFromForm(
                   [
@@ -445,12 +551,40 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
                   upstreams
                 );
               }}
-              block
-              style={{ marginTop: 16 }}
             >
-              Add Static Location
+              Add Static Route
             </Button>
           </Space>
+
+          {/* Tips Section */}
+          <div
+            style={{
+              marginTop: 32,
+              background: "#f5f5f5",
+              padding: 16,
+              borderRadius: 8,
+            }}
+          >
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <strong style={{ display: "block", marginBottom: 4 }}>
+                <ThunderboltOutlined /> Pro Tips:
+              </strong>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                <li>
+                  Use <code>rewrite</code> to strip prefixes before passing to
+                  backend services.
+                </li>
+                <li>
+                  Upstream names must match the <code>proxy_pass</code>{" "}
+                  destination strictly.
+                </li>
+                <li>
+                  Use the <strong>WS</strong> button to quickly add Websocket
+                  support headers.
+                </li>
+              </ul>
+            </Typography.Text>
+          </div>
         </div>
       )}
     </Card>
