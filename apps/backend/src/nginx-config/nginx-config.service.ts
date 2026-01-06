@@ -48,4 +48,9 @@ export class NginxConfigService {
       prUrl: `https://dev.azure.com/org/project/_git/repo/pullrequest/${prId}`,
     };
   }
+
+  async getConfig(team: string, env: string): Promise<{ content: string }> {
+    const content = await this.adoService.getConfigs(env, team);
+    return { content };
+  }
 }

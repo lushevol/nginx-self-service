@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get } from '@nestjs/common';
 import { NginxConfigService } from './nginx-config.service';
 
 export class ConfigDto {
@@ -21,5 +21,10 @@ export class NginxConfigController {
     @Body() body: ConfigDto,
   ) {
     return this.configService.createPullRequest(team, env, body.content);
+  }
+
+  @Get(':env')
+  async getConfig(@Param('team') team: string, @Param('env') env: string) {
+    return this.configService.getConfig(team, env);
   }
 }

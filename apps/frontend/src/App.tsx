@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Layout, Typography, Button, message, Alert } from "antd";
+import React, { useState, useEffect } from "react";
+import { Layout, Typography, Button, message, Alert, Modal } from "antd";
 import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";
 import axios from "axios";
@@ -10,11 +10,50 @@ const { Title } = Typography;
 const App = () => {
   const [team, setTeam] = useState("checkout");
   const [env, setEnv] = useState("dev");
-  const [config, setConfig] = useState(
-    `location /api/checkout/cart {\n    proxy_pass http://checkout_backend;\n}`
-  );
+  const [config, setConfig] = useState("");
   const [loading, setLoading] = useState(false);
   const [prUrl, setPrUrl] = useState<string | null>(null);
+
+  // [5. when switch env and team, should pop up alert then initial from data source]
+  const fetchConfig = async (t: string, e: string) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`//api/nginx/${t}/${e}`);
+      setConfig(res.data.content);
+      message.success(`Loaded config for ${t} [${e}]`);
+    } catch (err) {
+      message.error("Failed to load config");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig(team, env);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Initial load
+
+  const handleTeamChange = (newTeam: string) => {
+    Modal.confirm({
+      title: "Switch Team?",
+      content: "Unsaved changes will be lost. Do you want to continue?",
+      onOk: () => {
+        setTeam(newTeam);
+        fetchConfig(newTeam, env);
+      },
+    });
+  };
+
+  const handleEnvChange = (newEnv: string) => {
+    Modal.confirm({
+      title: "Switch Environment?",
+      content: "Unsaved changes will be lost. Do you want to continue?",
+      onOk: () => {
+        setEnv(newEnv);
+        fetchConfig(team, newEnv);
+      },
+    });
+  };
 
   const handleValidate = async () => {
     try {
@@ -57,9 +96,14 @@ const App = () => {
         </Title>
       </Header>
       <Content style={{ padding: "20px 50px" }}>
-        <TeamSelector team={team} setTeam={setTeam} env={env} setEnv={setEnv} />
+        <TeamSelector
+          team={team}
+          setTeam={handleTeamChange}
+          env={env}
+          setEnv={handleEnvChange}
+        />
 
-        <ConfigEditor value={config} onChange={setConfig} />
+        <ConfigEditor value={config} onChange={setConfig} team={team} />
 
         <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
           <Button type="primary" onClick={handleValidate} loading={loading}>
