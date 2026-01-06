@@ -1,31 +1,49 @@
 # Project Context
 
 ## Purpose
-[Describe your project's purpose and goals]
+
+A secure, self-service Nginx Gateway Portal using a GitOps workflow. The system allows internal teams to onboard their web applications to a central Nginx Gateway with strict isolation and validation ("Padded Cell" architecture).
 
 ## Tech Stack
-- [List your primary technologies]
-- [e.g., TypeScript, React, Node.js]
+
+- **Backend:** NestJS (TypeScript)
+- **UI:** Webpack 5 + Ant Design 6
+- **ORM:** Drizzle ORM + SQLite
+- **Monorepo:** pnpm workspace + turbo
+- **Infrastructure:** Nginx Open Source (running on VMs)
+- **Source Control:** Azure DevOps Repos (Node.js API client)
+- **CI/CD:** Azure Pipelines
 
 ## Project Conventions
 
 ### Code Style
-[Describe your code style preferences, formatting rules, and naming conventions]
+
+- Strict isolation of team resources.
+- Validation logic must run independently of the target VM.
 
 ### Architecture Patterns
-[Document your architectural decisions and patterns]
+
+- **GitOps:** Configuration managed via ADO Repos. Deployment via PR merge.
+- **Padded Cell:** Users can only modify safe primitives (locations/upstreams) within their namespace.
+- **No Trust:** Backend assumes all user input is potentially dangerous.
 
 ### Testing Strategy
-[Explain your testing approach and requirements]
 
-### Git Workflow
-[Describe your branching strategy and commit conventions]
+- Nginx syntax validation (dry-run) on backend before PR creation.
 
 ## Domain Context
-[Add domain-specific knowledge that AI assistants need to understand]
+
+- **Team Name:** Distinct identifier for isolation (e.g., `/api/{team_name}`).
+- **Environments:** Dev, UAT, Prod. No automatic promotion.
 
 ## Important Constraints
-[List any technical, business, or regulatory constraints]
+
+- **Routing:** Only `/api/{team_name}` or `/static/{team_name}` allowed.
+- **Directives:** Dangerous directives (`root`, `alias`, `lua_`, `include`) are blocked.
+- **Validation:** Must return error logs to UI immediately if checks fail.
+- **Upstreams:** User-defined upstreams must be namespaced to prevent collisions.
 
 ## External Dependencies
-[Document key external services, APIs, or systems]
+
+- Azure DevOps API (for Repos and PRs)
+- Nginx (target runtime)
