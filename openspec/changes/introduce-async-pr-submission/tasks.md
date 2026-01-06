@@ -1,0 +1,7 @@
+- [ ] Create `ChangeRequest` entity and migration
+- [ ] Implement `ChangeRequestService` to save pending requests
+- [ ] Update `ConfigController` to use `ChangeRequestService`
+- [ ] Implement `BackgroundWorker` for processing queue
+- [ ] Implement `AdoConnectivityCheck` loop
+- [ ] Refactor `ConfigEditor` to send split payload
+- [ ] Update `NginxConfigService` to handle split payload validation
