@@ -6,7 +6,6 @@ export class PolicyValidator {
   private readonly FORBIDDEN_DIRECTIVES = [
     'root',
     'alias',
-    'rewrite',
     'include',
     'resolver',
   ];

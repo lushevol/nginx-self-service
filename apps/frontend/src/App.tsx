@@ -18,7 +18,7 @@ const App = () => {
   const fetchConfig = async (t: string, e: string) => {
     try {
       setLoading(true);
-      const res = await axios.get(`//api/nginx/${t}/${e}`);
+      const res = await axios.get(`/api/nginx/${t}/${e}`);
       setConfig(res.data.content);
       message.success(`Loaded config for ${t} [${e}]`);
     } catch (err) {
@@ -59,7 +59,7 @@ const App = () => {
     try {
       setLoading(true);
       setPrUrl(null);
-      await axios.post(`http://localhost:3000/api/nginx/${team}/validate`, {
+      await axios.post(`/api/nginx/${team}/validate`, {
         content: config,
       });
       message.success("Configuration is valid!");
@@ -75,10 +75,9 @@ const App = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      const res = await axios.post(
-        `http://localhost:3000/api/nginx/${team}/submit/${env}`,
-        { content: config }
-      );
+      const res = await axios.post(`/api/nginx/${team}/submit/${env}`, {
+        content: config,
+      });
       setPrUrl(res.data.prUrl);
       message.success("PR Created Successfully!");
     } catch {

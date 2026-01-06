@@ -50,11 +50,12 @@ export class SyntaxValidator {
 events {}
 http {
     server {
-        listen 80;
-        server_name localhost;
-${content}
+      listen 80;
+      server_name localhost;
     }
 }
+
+${content}
 `;
       await fs.promises.writeFile(tmpFile, fullConfig);
       await execAsync(`nginx -t -c ${tmpFile}`);
