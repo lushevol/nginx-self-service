@@ -1,0 +1,15 @@
+- [ ] Install `nginx-conf` dependency <!-- id: 0 -->
+- [ ] Implement `AzureDevOpsService.getConfigs` <!-- id: 1 -->
+  - [ ] Fetch file content from ADO repo using `azure-devops-node-api`
+  - [ ] Handle missing files gracefully
+- [ ] Implement `AzureDevOpsService.createPR` <!-- id: 2 -->
+  - [ ] Create feature branch
+  - [ ] Commit file updates
+  - [ ] Create Pull Request targeting environment branch
+- [ ] Refactor `SyntaxValidator` <!-- id: 3 -->
+  - [ ] Remove `runNginxTest` method
+  - [ ] Integrate `nginx-conf` to parse configuration
+  - [ ] Return parsing errors as validation failures
+- [ ] Add Unit Tests <!-- id: 4 -->
+  - [ ] Mock ADO API for service tests
+  - [ ] Test validator with valid and invalid config strings
