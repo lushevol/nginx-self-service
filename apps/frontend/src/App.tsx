@@ -61,7 +61,7 @@ const App = () => {
     fetchPending(team);
 
     // Poll for pending updates every 5s
-    const interval = setInterval(() => fetchPending(team), 5000);
+    const interval = setInterval(() => fetchPending(team), 60000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Initial load - team/env changes handled by handlers
@@ -85,6 +85,7 @@ const App = () => {
       onOk: () => {
         setEnv(newEnv);
         fetchConfig(team, newEnv);
+        fetchPending(team);
       },
     });
   };
@@ -142,32 +143,60 @@ const App = () => {
         />
 
         {/* Pending Requests Alert */}
+        {/* Pending Request Banner */}
         {pendingRequests.length > 0 && (
-          <Alert
-            message={`Pending Changes: ${pendingRequests.length}`}
-            description={
-              <ul style={{ paddingLeft: 20, margin: 0 }}>
-                {pendingRequests.map((req) => (
-                  <li key={req.id}>
-                    {req.status} - {new Date(req.createdAt).toLocaleString()}
-                    {req.prId && (
-                      <a
-                        href={`https://dev.azure.com/myorg/nginx-repo/_git/repo/pullrequest/${req.prId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ marginLeft: 10 }}
-                      >
-                        PR #{req.prId}
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            }
-            type="info"
-            showIcon
-            style={{ marginBottom: 20 }}
-          />
+          <div
+            style={{
+              marginBottom: 20,
+              padding: "12px 24px",
+              background: "#e6f7ff",
+              border: "1px solid #91d5ff",
+              borderRadius: 4,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontWeight: 600, color: "#0050b3" }}>
+                Status: {pendingRequests[0].status}
+              </span>
+              <span style={{ color: "#595959", fontSize: 13 }}>
+                {new Date(pendingRequests[0].createdAt).toLocaleString()}
+              </span>
+              {pendingRequests[0].prId && (
+                <a
+                  href={`https://dev.azure.com/myorg/nginx-repo/_git/repo/pullrequest/${pendingRequests[0].prId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontWeight: 500 }}
+                >
+                  View PR #{pendingRequests[0].prId}
+                </a>
+              )}
+            </div>
+            {(pendingRequests[0].status === "PENDING" ||
+              pendingRequests[0].status === "FAILED") && (
+              <Button
+                size="small"
+                danger
+                type="text"
+                onClick={async () => {
+                  try {
+                    await axios.delete(
+                      `/api/nginx/${team}/pending/${pendingRequests[0].id}`
+                    );
+                    message.success("Request abandoned");
+                    fetchPending(team);
+                  } catch {
+                    message.error("Failed to abandon request");
+                  }
+                }}
+              >
+                Abandon
+              </Button>
+            )}
+          </div>
         )}
 
         <ConfigEditor value={config} onChange={setConfig} team={team} />
@@ -180,7 +209,9 @@ const App = () => {
             danger
             onClick={handleSubmit}
             loading={loading}
-            disabled={!config}
+            disabled={
+              !config || pendingRequests.some((r) => r.status === "PENDING")
+            }
           >
             Submit Change Request
           </Button>

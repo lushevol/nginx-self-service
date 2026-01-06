@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Delete } from '@nestjs/common';
 import { NginxConfigService } from './nginx-config.service';
 
 export class ConfigDto {
@@ -36,6 +36,11 @@ export class NginxConfigController {
   @Get('pending')
   async getPending(@Param('team') team: string) {
     return this.configService.getPendingRequests(team);
+  }
+
+  @Delete('pending/:id')
+  async deletePend(@Param('id') id: string) {
+    return this.configService.deleteRequest(id);
   }
 
   @Get(':env')

@@ -14,6 +14,10 @@ sequenceDiagram
     API->>DB: Insert "Pending" Change Request
     API-->>UI: Return Change ID
 
+    UI->>API: DELETE /config/pending/:id
+    API->>DB: Delete Request
+    API-->>UI: 200 OK
+
     loop Every X seconds
         Worker->>DB: Fetch "Pending" Requests
         Worker->>ADO: Test Connectivity (Loop Test)
@@ -42,6 +46,12 @@ New table `change_requests`:
 
 ## Config Splitting
 
-- Frontend will send `{ upstreams: [...], locations: [...] }`.
+- Frontend will send `{ upstreams: string, locations: string }`.
 - Backend validation will validate blocks individually.
 - Nginx generation will concatenate them.
+
+## API Changes
+
+- `POST /api/nginx/:team/submit/:env`: Submits a change request.
+- `GET /api/nginx/:team/pending`: Lists pending requests.
+- `DELETE /api/nginx/:team/pending/:id`: Abandons a pending request.

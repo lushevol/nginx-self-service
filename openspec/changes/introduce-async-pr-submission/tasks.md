@@ -6,3 +6,5 @@
 - [x] Implement `AdoConnectivityCheck` loop
 - [x] Refactor `ConfigEditor` to send split payload
 - [x] Update `NginxConfigService` to handle split payload validation
+- [x] Implement `DELETE /api/nginx/:team/pending/:id` to allow abandoning requests
+- [x] Update Frontend Pending UI to be compact and support abandonment

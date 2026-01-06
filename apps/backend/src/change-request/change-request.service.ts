@@ -48,4 +48,8 @@ export class ChangeRequestService {
       .set({ status, prId, updatedAt: Date.now() })
       .where(eq(changeRequests.id, id));
   }
+
+  async delete(id: string) {
+    await db.delete(changeRequests).where(eq(changeRequests.id, id));
+  }
 }

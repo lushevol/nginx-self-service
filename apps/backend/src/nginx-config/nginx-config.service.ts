@@ -73,10 +73,6 @@ export class NginxConfigService {
     };
   }
 
-  async getPendingRequests(team: string) {
-    return this.changeRequestService.findAllByTeam(team);
-  }
-
   // Legacy method kept for reference or direct usage if needed
   async createPullRequest(team: string, env: string, content: string) {
     // Re-validate to be safe
@@ -92,5 +88,13 @@ export class NginxConfigService {
   async getConfig(team: string, env: string): Promise<{ content: string }> {
     const content = await this.adoService.getConfigs(env, team);
     return { content };
+  }
+
+  async getPendingRequests(team: string) {
+    return this.changeRequestService.findAllByTeam(team);
+  }
+
+  async deleteRequest(id: string) {
+    await this.changeRequestService.delete(id);
   }
 }
