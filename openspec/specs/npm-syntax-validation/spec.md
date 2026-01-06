@@ -1,5 +1,8 @@
-## MODIFIED Requirements
+# npm-syntax-validation Specification
 
+## Purpose
+TBD - created by archiving change implement-ado-service. Update Purpose after archive.
+## Requirements
 ### Requirement: Npm-based Syntax Validation
 
 The system MUST validate Nginx configuration syntax using an npm package (e.g., `nginx-conf`) to remove the dependency on the native `nginx` binary.
@@ -17,3 +20,4 @@ And NOT attempt to execute `nginx -t`.
 Given an invalid configuration
 When `validate` is called
 Then it should identify the line number or nature of the error from the parser exception.
+
