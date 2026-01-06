@@ -46,6 +46,11 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
             [/proxy_set_header\s+/, "keyword"],
             [/proxy_redirect\s+/, "keyword"],
             [/add_header\s+/, "keyword"],
+            [/proxy_http_version\s+/, "keyword"],
+            [/client_max_body_size\s+/, "keyword"],
+            [/proxy_connect_timeout\s+/, "keyword"],
+            [/proxy_send_timeout\s+/, "keyword"],
+            [/proxy_read_timeout\s+/, "keyword"],
             [/[a-z_]+/, "identifier"],
             [/\$/, "variable"],
             [/[{}]/, "delimiter"],
@@ -87,6 +92,35 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
       key: "proxy_set_header",
       value: "Host $host",
     });
+    updateFromForm(newLocs, upstreams);
+  };
+
+  const addWebsocketSupport = (locIdx: number) => {
+    const newLocs = [...locations];
+    newLocs[locIdx].directives.push(
+      { key: "proxy_http_version", value: "1.1" },
+      { key: "proxy_set_header", value: "Upgrade $http_upgrade" },
+      { key: "proxy_set_header", value: 'Connection "upgrade"' }
+    );
+    updateFromForm(newLocs, upstreams);
+  };
+
+  const addBodySizeLimit = (locIdx: number) => {
+    const newLocs = [...locations];
+    newLocs[locIdx].directives.push({
+      key: "client_max_body_size",
+      value: "10m",
+    });
+    updateFromForm(newLocs, upstreams);
+  };
+
+  const addTimeouts = (locIdx: number) => {
+    const newLocs = [...locations];
+    newLocs[locIdx].directives.push(
+      { key: "proxy_connect_timeout", value: "60s" },
+      { key: "proxy_send_timeout", value: "60s" },
+      { key: "proxy_read_timeout", value: "60s" }
+    );
     updateFromForm(newLocs, upstreams);
   };
 
@@ -263,14 +297,47 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
                     </List.Item>
                   )}
                 />
-                <Button
-                  type="dashed"
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => addDirective(idx)}
-                >
-                  Add Directive
-                </Button>
+                <Space>
+                  <Button
+                    type="dashed"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => addDirective(idx)}
+                  >
+                    Add Directive
+                  </Button>
+                  {!loc.directives.some((d) =>
+                    d.value.toLowerCase().includes("upgrade")
+                  ) && (
+                    <Button
+                      type="dashed"
+                      size="small"
+                      onClick={() => addWebsocketSupport(idx)}
+                    >
+                      Add WebSocket Support
+                    </Button>
+                  )}
+                  {!loc.directives.some(
+                    (d) => d.key === "client_max_body_size"
+                  ) && (
+                    <Button
+                      type="dashed"
+                      size="small"
+                      onClick={() => addBodySizeLimit(idx)}
+                    >
+                      Add Body Size Limit
+                    </Button>
+                  )}
+                  {!loc.directives.some((d) => d.key.includes("_timeout")) && (
+                    <Button
+                      type="dashed"
+                      size="small"
+                      onClick={() => addTimeouts(idx)}
+                    >
+                      Add Timeouts
+                    </Button>
+                  )}
+                </Space>
 
                 <Button
                   icon={<DeleteOutlined />}

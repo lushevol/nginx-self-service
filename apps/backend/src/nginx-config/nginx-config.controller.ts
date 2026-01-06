@@ -5,7 +5,7 @@ export class ConfigDto {
   content: string;
 }
 
-@Controller('nginx/:team')
+@Controller('api/nginx/:team')
 export class NginxConfigController {
   constructor(private readonly configService: NginxConfigService) {}
 
