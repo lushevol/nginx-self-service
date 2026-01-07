@@ -1,10 +1,6 @@
 import { Controller, Post, Body, Param, Get, Delete } from '@nestjs/common';
 import { NginxConfigService } from './nginx-config.service';
-
-export class ConfigDto {
-  upstreams: string;
-  locations: string;
-}
+import { ConfigDto } from './dto/config.dto';
 
 @Controller('api/nginx/:team')
 export class NginxConfigController {

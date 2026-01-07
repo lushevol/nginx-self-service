@@ -2,6 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ChangeRequestService } from './change-request.service';
 import { AzureDevOpsService } from '../nginx-config/azure-devops.service';
 import { NginxConfigService } from '../nginx-config/nginx-config.service';
+import { RequestStatus } from './dto/request-status.enum';
+
+const POLL_INTERVAL_MS = 10000;
 
 @Injectable()
 export class BackgroundWorkerService implements OnModuleInit {
@@ -18,7 +21,7 @@ export class BackgroundWorkerService implements OnModuleInit {
     // Poll every 10 seconds
     setInterval(() => {
       void this.processQueue();
-    }, 10000);
+    }, POLL_INTERVAL_MS);
     this.logger.log('Background worker started');
   }
 
@@ -46,35 +49,39 @@ export class BackgroundWorkerService implements OnModuleInit {
       }
 
       for (const req of pending) {
-        try {
-          const combined = `${req.upstreamsConfig}\n${req.locationsConfig}`;
-
-          // Re-use createPullRequest from NginxConfigService (or AdoService directly)
-          // Since NginxConfigService calls validate + createPR, and we already validated on entry,
-          // we can skip validation here or safe to do it again.
-          const result = await this.configService.createPullRequest(
-            req.team,
-            req.environment,
-            combined,
-          );
-
-          const prIdMatch = result.prUrl.match(/pullrequest\/(\d+)/);
-          const prId = prIdMatch ? prIdMatch[1] : 'unknown';
-
-          await this.changeRequestService.updateStatus(
-            req.id,
-            'SUBMITTED',
-            prId,
-          );
-          this.logger.log(`Submitted request ${req.id} as PR ${prId}`);
-        } catch (e) {
-          this.logger.error(`Failed to submit request ${req.id}: ${e}`);
-        }
+        await this.processChangeRequest(req);
       }
     } catch (e) {
       this.logger.error('Error in background worker', e);
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  private async processChangeRequest(req: any) {
+    try {
+      const combined = `${req.upstreamsConfig}\n${req.locationsConfig}`;
+
+      // Re-use createPullRequest from NginxConfigService (or AdoService directly)
+      // Since NginxConfigService calls validate + createPR, and we already validated on entry,
+      // we can skip validation here or safe to do it again.
+      const result = await this.configService.createPullRequest(
+        req.team,
+        req.environment,
+        combined,
+      );
+
+      const prIdMatch = result.prUrl.match(/pullrequest\/(\d+)/);
+      const prId = prIdMatch ? prIdMatch[1] : 'unknown';
+
+      await this.changeRequestService.updateStatus(
+        req.id,
+        RequestStatus.SUBMITTED,
+        prId,
+      );
+      this.logger.log(`Submitted request ${req.id} as PR ${prId}`);
+    } catch (e) {
+      this.logger.error(`Failed to submit request ${req.id}: ${e}`);
     }
   }
 }

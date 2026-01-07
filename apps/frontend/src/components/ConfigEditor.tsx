@@ -1,30 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
+import { Button, Tabs, Space, Card, Typography } from "antd";
 import {
-  Input,
-  Button,
-  Tabs,
-  Space,
-  Card,
-  List,
-  Typography,
-  Collapse,
-  Tag,
-  Tooltip,
-  Divider,
-} from "antd";
-import {
-  DeleteOutlined,
-  PlusOutlined,
-  GlobalOutlined,
-  FolderOpenOutlined,
   ThunderboltOutlined,
   SettingOutlined,
   CodeOutlined,
   ApiOutlined,
   FileTextOutlined,
-  SaveOutlined,
 } from "@ant-design/icons";
+import { useNginxConfig } from "../hooks/useNginxConfig";
+import { UpstreamsList } from "./UpstreamsList";
+import { LocationsList } from "./LocationsList";
 
 interface Props {
   value: string;
@@ -32,21 +18,28 @@ interface Props {
   team: string;
 }
 
-import {
-  parseConfig,
-  generateUpstreamsBlock,
-  generateLocationsBlock,
-  type Location,
-  type Upstream,
-} from "../utils/nginx";
-
 export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   const [mode, setMode] = useState<"raw" | "wizard">("wizard");
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [upstreams, setUpstreams] = useState<Upstream[]>([]); // [1. No upsteams configs]
   const monaco = useMonaco();
 
-  // [4. add syntax highlight for raw editor]
+  const {
+    locations,
+    upstreams,
+    addDirective,
+    addWebsocketSupport,
+    addBodySizeLimit,
+    addTimeouts,
+    updateDirective,
+    removeDirective,
+    addUpstream,
+    removeUpstream,
+    updateUpstreamName,
+    updateUpstreamServers,
+    addLocation,
+    removeLocation,
+    updateLocationPath,
+  } = useNginxConfig(value, onChange);
+
   useEffect(() => {
     if (monaco) {
       monaco.languages.register({ id: "nginx" });
@@ -77,288 +70,9 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
     }
   }, [monaco]);
 
-  // Sync Logic
-  // Text -> Form
-  useEffect(() => {
-    if (mode === "wizard") {
-      const { locs, upstrs } = parseConfig(value);
-      // eslint-disable-next-line
-      setLocations(locs);
-      setUpstreams(upstrs);
-    }
-  }, [value, mode]);
-
-  const updateFromForm = (
-    newLocations: Location[],
-    newUpstreams: Upstream[]
-  ) => {
-    setLocations(newLocations);
-    setUpstreams(newUpstreams);
-    const uStr = generateUpstreamsBlock(newUpstreams);
-    const lStr = generateLocationsBlock(newLocations);
-    const fullConfig = uStr && lStr ? `${uStr}\n\n${lStr}` : uStr || lStr;
-    onChange(fullConfig);
-  };
-
   const handleEditorChange = (val: string | undefined) => {
     onChange(val || "");
   };
-
-  // [2. support nginx proxy functions]
-  const addDirective = (locIdx: number) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives.push({
-      key: "proxy_set_header",
-      value: "Host $host",
-    });
-    updateFromForm(newLocs, upstreams);
-  };
-
-  const addWebsocketSupport = (locIdx: number) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives.push(
-      { key: "proxy_http_version", value: "1.1" },
-      { key: "proxy_set_header", value: "Upgrade $http_upgrade" },
-      { key: "proxy_set_header", value: 'Connection "upgrade"' }
-    );
-    updateFromForm(newLocs, upstreams);
-  };
-
-  const addBodySizeLimit = (locIdx: number) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives.push({
-      key: "client_max_body_size",
-      value: "10m",
-    });
-    updateFromForm(newLocs, upstreams);
-  };
-
-  const addTimeouts = (locIdx: number) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives.push(
-      { key: "proxy_connect_timeout", value: "60s" },
-      { key: "proxy_send_timeout", value: "60s" },
-      { key: "proxy_read_timeout", value: "60s" }
-    );
-    updateFromForm(newLocs, upstreams);
-  };
-
-  const updateDirective = (
-    locIdx: number,
-    dirIdx: number,
-    key: string,
-    val: string
-  ) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives[dirIdx] = { key, value: val };
-    updateFromForm(newLocs, upstreams);
-  };
-
-  const removeDirective = (locIdx: number, dirIdx: number) => {
-    const newLocs = [...locations];
-    newLocs[locIdx].directives = newLocs[locIdx].directives.filter(
-      (_, i) => i !== dirIdx
-    );
-    updateFromForm(newLocs, upstreams);
-  };
-
-  // UI Components
-  const renderUpstreams = () => (
-    <Collapse
-      ghost
-      defaultActiveKey={["0"]}
-      items={upstreams.map((u, idx) => ({
-        key: idx.toString(),
-        label: (
-          <Space>
-            <GlobalOutlined style={{ color: "#1890ff" }} />
-            <span style={{ fontWeight: 500 }}>{u.name}</span>
-            <Tag color="geekblue">{u.servers.length} servers</Tag>
-          </Space>
-        ),
-        extra: (
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              const newUps = upstreams.filter((_, i) => i !== idx);
-              updateFromForm(locations, newUps);
-            }}
-          />
-        ),
-        children: (
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Input
-              addonBefore="Name"
-              value={u.name}
-              onChange={(e) => {
-                const newUps = [...upstreams];
-                newUps[idx].name = e.target.value;
-                updateFromForm(locations, newUps);
-              }}
-            />
-            <Input.TextArea
-              rows={3}
-              value={u.servers.join("\n")}
-              onChange={(e) => {
-                const newUps = [...upstreams];
-                newUps[idx].servers = e.target.value.split("\n");
-                updateFromForm(locations, newUps);
-              }}
-              placeholder="server 10.0.0.1:8080;"
-            />
-          </Space>
-        ),
-      }))}
-    />
-  );
-
-  const renderLocations = () => (
-    <Collapse
-      defaultActiveKey={["0"]}
-      items={locations.map((loc, idx) => ({
-        key: idx.toString(),
-        label: (
-          <Space>
-            <FolderOpenOutlined style={{ color: "#faad14" }} />
-            <span style={{ fontWeight: 500 }}>{loc.path}</span>
-            <Tag>{loc.directives.length} directives</Tag>
-          </Space>
-        ),
-        extra: (
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              const newLocs = locations.filter((_, i) => i !== idx);
-              updateFromForm(newLocs, upstreams);
-            }}
-          />
-        ),
-        children: (
-          <Space direction="vertical" style={{ width: "100%" }} size="large">
-            <Input
-              addonBefore="Path"
-              value={loc.path}
-              onChange={(e) => {
-                const newLocs = [...locations];
-                newLocs[idx].path = e.target.value;
-                updateFromForm(newLocs, upstreams);
-              }}
-              prefix={<FolderOpenOutlined style={{ color: "#bfbfbf" }} />}
-            />
-
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                  alignItems: "center",
-                }}
-              >
-                <Typography.Text strong>
-                  <SettingOutlined /> Directives
-                </Typography.Text>
-                <Space size={2}>
-                  {!loc.directives.some((d) =>
-                    d.value.toLowerCase().includes("upgrade")
-                  ) && (
-                    <Tooltip title="Add Upgrade & Connection headers">
-                      <Button
-                        size="small"
-                        icon={<ThunderboltOutlined />}
-                        onClick={() => addWebsocketSupport(idx)}
-                      >
-                        WS
-                      </Button>
-                    </Tooltip>
-                  )}
-                  {!loc.directives.some(
-                    (d) => d.key === "client_max_body_size"
-                  ) && (
-                    <Tooltip title="Add client_max_body_size 10m">
-                      <Button
-                        size="small"
-                        icon={<SaveOutlined />}
-                        onClick={() => addBodySizeLimit(idx)}
-                      >
-                        Body
-                      </Button>
-                    </Tooltip>
-                  )}
-                  {!loc.directives.some((d) => d.key.includes("_timeout")) && (
-                    <Tooltip title="Add standard timeouts (60s)">
-                      <Button
-                        size="small"
-                        icon={<SettingOutlined />}
-                        onClick={() => addTimeouts(idx)}
-                      >
-                        Timeout
-                      </Button>
-                    </Tooltip>
-                  )}
-                  <Tooltip title="Add custom directive">
-                    <Button
-                      type="primary"
-                      size="small"
-                      ghost
-                      icon={<PlusOutlined />}
-                      onClick={() => addDirective(idx)}
-                    >
-                      Add
-                    </Button>
-                  </Tooltip>
-                </Space>
-              </div>
-
-              <List
-                size="small"
-                dataSource={loc.directives}
-                renderItem={(item, dIdx) => (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      marginBottom: 8,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Input
-                      value={item.key}
-                      onChange={(e) =>
-                        updateDirective(idx, dIdx, e.target.value, item.value)
-                      }
-                      style={{ width: "40%" }}
-                      placeholder="Key"
-                    />
-                    <Input
-                      value={item.value}
-                      onChange={(e) =>
-                        updateDirective(idx, dIdx, item.key, e.target.value)
-                      }
-                      style={{ flex: 1 }}
-                      placeholder="Value"
-                    />
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => removeDirective(idx, dIdx)}
-                    />
-                  </div>
-                )}
-              />
-            </div>
-          </Space>
-        ),
-      }))}
-    />
-  );
 
   return (
     <Card
@@ -412,47 +126,27 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
       ) : (
         <div style={{ padding: 24 }}>
           {/* Section: Upstreams */}
-          <Divider orientation="left">
-            <GlobalOutlined /> Upstreams
-          </Divider>
-          {upstreams.length === 0 && (
-            <div
-              style={{ textAlign: "center", marginBottom: 16, color: "#999" }}
-            >
-              No upstreams defined.
-            </div>
-          )}
-          {renderUpstreams()}
-          <Button
-            type="dashed"
-            block
-            icon={<PlusOutlined />}
-            onClick={() => {
-              updateFromForm(locations, [
-                ...upstreams,
-                {
-                  name: `${team}_backend_service`,
-                  servers: ["your_backend_service:8080"],
-                },
-              ]);
-            }}
-            style={{ marginTop: 16 }}
-          >
-            Add Upstream
-          </Button>
+          <UpstreamsList
+            upstreams={upstreams}
+            team={team}
+            onAdd={addUpstream}
+            onRemove={removeUpstream}
+            onUpdateName={updateUpstreamName}
+            onUpdateServers={updateUpstreamServers}
+          />
 
           {/* Section: Locations */}
-          <Divider orientation="left">
-            <FolderOpenOutlined /> Locations
-          </Divider>
-          {locations.length === 0 && (
-            <div
-              style={{ textAlign: "center", marginBottom: 16, color: "#999" }}
-            >
-              No locations defined.
-            </div>
-          )}
-          {renderLocations()}
+          <LocationsList
+            locations={locations}
+            onRemove={removeLocation}
+            onUpdatePath={updateLocationPath}
+            onAddDirective={addDirective}
+            onUpdateDirective={updateDirective}
+            onRemoveDirective={removeDirective}
+            onAddWebsocket={addWebsocketSupport}
+            onAddBodySize={addBodySizeLimit}
+            onAddTimeouts={addTimeouts}
+          />
 
           <Space style={{ width: "100%", marginTop: 16 }}>
             <Button
@@ -461,42 +155,33 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
               icon={<ApiOutlined />}
               block
               onClick={() => {
-                updateFromForm(
-                  [
-                    ...locations,
-                    {
-                      path: `/api/${team}/`,
-                      directives: [
-                        {
-                          key: "rewrite",
-                          value: `^/api/${team}/(.*)$ /$1 break`,
-                        },
-                        { key: "proxy_redirect", value: "off" },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Real-IP $remote_addr",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-Proto http",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-For $remote_addr",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-Host $remote_addr",
-                        },
-                        {
-                          key: "proxy_pass",
-                          value: `https://${team}_backend_service`,
-                        },
-                      ],
-                    },
-                  ],
-                  upstreams
-                );
+                addLocation(`/api/${team}/`, [
+                  {
+                    key: "rewrite",
+                    value: `^/api/${team}/(.*)$ /$1 break`,
+                  },
+                  { key: "proxy_redirect", value: "off" },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Real-IP $remote_addr",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-Proto http",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-For $remote_addr",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-Host $remote_addr",
+                  },
+                  {
+                    key: "proxy_pass",
+                    value: `https://${team}_backend_service`,
+                  },
+                ]);
               }}
             >
               Add API Route
@@ -505,46 +190,37 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
               icon={<FileTextOutlined />}
               block
               onClick={() => {
-                updateFromForm(
-                  [
-                    ...locations,
-                    {
-                      path: `/static/${team}/`,
-                      directives: [
-                        {
-                          key: "rewrite",
-                          value: `^/static/${team}/(.*)$ /$1 break`,
-                        },
-                        { key: "proxy_redirect", value: "off" },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Real-IP $remote_addr",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-Proto http",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-For $remote_addr",
-                        },
-                        {
-                          key: "proxy_set_header",
-                          value: "X-Forwarded-Host $remote_addr",
-                        },
-                        {
-                          key: "add_header",
-                          value: 'Cache-Control "no-cache"',
-                        },
-                        {
-                          key: "proxy_pass",
-                          value: `https://${team}_static_server`,
-                        },
-                      ],
-                    },
-                  ],
-                  upstreams
-                );
+                addLocation(`/static/${team}/`, [
+                  {
+                    key: "rewrite",
+                    value: `^/static/${team}/(.*)$ /$1 break`,
+                  },
+                  { key: "proxy_redirect", value: "off" },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Real-IP $remote_addr",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-Proto http",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-For $remote_addr",
+                  },
+                  {
+                    key: "proxy_set_header",
+                    value: "X-Forwarded-Host $remote_addr",
+                  },
+                  {
+                    key: "add_header",
+                    value: 'Cache-Control "no-cache"',
+                  },
+                  {
+                    key: "proxy_pass",
+                    value: `https://${team}_static_server`,
+                  },
+                ]);
               }}
             >
               Add Static Route

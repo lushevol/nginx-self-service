@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Layout, Typography, Button, message, Alert, Modal } from "antd";
 import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";
+import { PendingRequestBanner } from "./components/PendingRequestBanner";
 import axios from "axios";
-import { parseConfig, splitConfig } from "./utils/nginx";
+import { splitConfig } from "./utils/nginx";
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -141,60 +142,12 @@ const App = () => {
         />
 
         {/* Pending Requests Alert */}
-        {/* Pending Request Banner */}
         {pendingRequests.length > 0 && (
-          <div
-            style={{
-              marginBottom: 20,
-              padding: "12px 24px",
-              background: "#e6f7ff",
-              border: "1px solid #91d5ff",
-              borderRadius: 4,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontWeight: 600, color: "#0050b3" }}>
-                Status: {pendingRequests[0].status}
-              </span>
-              <span style={{ color: "#595959", fontSize: 13 }}>
-                {new Date(pendingRequests[0].createdAt).toLocaleString()}
-              </span>
-              {pendingRequests[0].prId && (
-                <a
-                  href={`https://dev.azure.com/myorg/nginx-repo/_git/repo/pullrequest/${pendingRequests[0].prId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ fontWeight: 500 }}
-                >
-                  View PR #{pendingRequests[0].prId}
-                </a>
-              )}
-            </div>
-            {(pendingRequests[0].status === "PENDING" ||
-              pendingRequests[0].status === "FAILED") && (
-              <Button
-                size="small"
-                danger
-                type="text"
-                onClick={async () => {
-                  try {
-                    await axios.delete(
-                      `/api/nginx/${team}/pending/${pendingRequests[0].id}`
-                    );
-                    message.success("Request abandoned");
-                    fetchPending(team);
-                  } catch {
-                    message.error("Failed to abandon request");
-                  }
-                }}
-              >
-                Abandon
-              </Button>
-            )}
-          </div>
+          <PendingRequestBanner
+            request={pendingRequests[0]}
+            team={team}
+            onRefresh={() => fetchPending(team)}
+          />
         )}
 
         <ConfigEditor value={config} onChange={setConfig} team={team} />
