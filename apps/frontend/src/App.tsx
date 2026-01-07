@@ -4,7 +4,6 @@ import { TeamSelector } from "./components/TeamSelector";
 import { ConfigEditor } from "./components/ConfigEditor";
 import { PendingRequestBanner } from "./components/PendingRequestBanner";
 import axios from "axios";
-import { splitConfig } from "./utils/nginx";
 
 const { Header, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -12,7 +11,8 @@ const { Title } = Typography;
 const App = () => {
   const [team, setTeam] = useState("checkout");
   const [env, setEnv] = useState("dev");
-  const [config, setConfig] = useState("");
+  const [upstreams, setUpstreams] = useState("");
+  const [locations, setLocations] = useState("");
   const [loading, setLoading] = useState(false);
   const [prUrl, setPrUrl] = useState<string | null>(null);
 
@@ -33,11 +33,12 @@ const App = () => {
   const fetchConfig = async (t: string, e: string) => {
     try {
       setLoading(true);
+      setLoading(true);
       const res = await axios.get(`/api/nginx/${t}/${e}`);
-      const content = res.data.content;
-      setConfig(content); // full config for editor
+      setUpstreams(res.data.upstreams || "");
+      setLocations(res.data.locations || "");
       message.success(`Loaded config for ${t} [${e}]`);
-    } catch (err) {
+    } catch {
       message.error("Failed to load config");
     } finally {
       setLoading(false);
@@ -48,7 +49,7 @@ const App = () => {
     try {
       const res = await axios.get(`/api/nginx/${t}/pending`);
       setPendingRequests(res.data);
-    } catch (e) {
+    } catch {
       console.error("Failed to load pending requests");
     }
   };
@@ -91,8 +92,6 @@ const App = () => {
     try {
       setLoading(true);
       setPrUrl(null);
-      setPrUrl(null);
-      const { upstreams, locations } = splitConfig(config);
       await axios.post(`/api/nginx/${team}/validate`, {
         upstreams,
         locations,
@@ -111,7 +110,6 @@ const App = () => {
     try {
       setLoading(true);
       setLoading(true);
-      const { upstreams, locations } = splitConfig(config);
       const res = await axios.post(`/api/nginx/${team}/submit/${env}`, {
         upstreams,
         locations,
@@ -150,7 +148,13 @@ const App = () => {
           />
         )}
 
-        <ConfigEditor value={config} onChange={setConfig} team={team} />
+        <ConfigEditor
+          upstreams={upstreams}
+          locations={locations}
+          onUpstreamsChange={setUpstreams}
+          onLocationsChange={setLocations}
+          team={team}
+        />
 
         <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
           <Button type="primary" onClick={handleValidate} loading={loading}>
@@ -161,7 +165,8 @@ const App = () => {
             onClick={handleSubmit}
             loading={loading}
             disabled={
-              !config || pendingRequests.some((r) => r.status === "PENDING")
+              (!upstreams && !locations) ||
+              pendingRequests.some((r) => r.status === "PENDING")
             }
           >
             Submit Change Request

@@ -74,20 +74,32 @@ export class NginxConfigService {
   }
 
   // Legacy method kept for reference or direct usage if needed
-  async createPullRequest(team: string, env: string, content: string) {
+  async createPullRequest(
+    team: string,
+    env: string,
+    upstreams: string,
+    locations: string,
+  ) {
     // Re-validate to be safe
-    await this.validateConfig(team, content);
+    await this.validateSplitConfig(team, upstreams, locations);
 
     // Submit to ADO
-    const prId = await this.adoService.createPR(env, team, content);
+    const prId = await this.adoService.createPR(
+      env,
+      team,
+      upstreams,
+      locations,
+    );
     return {
       prUrl: `${process.env.ADO_ORG_URL}/${process.env.ADO_REPO_ID}/_git/repo/pullrequest/${prId}`,
     };
   }
 
-  async getConfig(team: string, env: string): Promise<{ content: string }> {
-    const content = await this.adoService.getConfigs(env, team);
-    return { content };
+  async getConfig(
+    team: string,
+    env: string,
+  ): Promise<{ upstreams: string; locations: string }> {
+    return this.adoService.getConfigs(env, team);
   }
 
   async getPendingRequests(team: string) {

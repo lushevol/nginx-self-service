@@ -8,6 +8,7 @@ import {
   VersionControlChangeType,
   ItemContentType,
 } from 'azure-devops-node-api/interfaces/GitInterfaces';
+import { PathUtil } from './utils/path.util';
 
 @Injectable()
 export class AzureDevOpsService {
@@ -19,8 +20,8 @@ export class AzureDevOpsService {
   });
 
   constructor() {
-    const orgUrl = process.env.ADO_ORG_URL || 'https://dev.azure.com/myorg';
-    const token = process.env.ADO_PAT || '';
+    const orgUrl = `https://dev.azure.com/${process.env.ADO_ORG}`;
+    const token = process.env.ADO_PAT ?? '';
     const authHandler = getPersonalAccessTokenHandler(token);
     this.connection = new WebApi(orgUrl, authHandler, {
       ignoreSslError: true,
@@ -49,65 +50,118 @@ export class AzureDevOpsService {
     try {
       await this.getGitApi();
       return true;
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }
 
-  async getConfigs(env: string, team: string): Promise<string> {
-    const repoId = process.env.ADO_REPO_ID || 'nginx-repo';
+  async getConfigs(
+    env: string,
+    team: string,
+  ): Promise<{ upstreams: string; locations: string }> {
+    const repoName = process.env.ADO_REPO ?? 'nginx-repo';
     const versionDescriptor = {
       version: 'main',
       versionType: 0,
       versionOption: 0,
     };
 
-    try {
-      const git = await this.getGitApi();
-      const item = await git.getItemContent(
-        repoId,
-        `nginx/${env}/${team}/nginx.conf`,
-        '13ab4c56-8a75-401e-8356-c95092b24e76',
-        undefined,
-        0,
-        true, // includeContent
-        true,
-        false,
-        versionDescriptor,
-      );
+    const getFileContent = async (path: string): Promise<string> => {
+      try {
+        const git = await this.getGitApi();
+        const item = await git.getItemContent(
+          repoName,
+          path,
+          process.env.ADO_PROJECT,
+          undefined,
+          0,
+          true, // includeContent
+          true,
+          false,
+          versionDescriptor,
+        );
 
-      const chunks: Buffer[] = [];
-      for await (const chunk of item) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const chunks: Buffer[] = [];
+        for await (const chunk of item) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        return Buffer.concat(chunks).toString('utf-8');
+      } catch (e: unknown) {
+        // Warning log but return empty string so we don't crash
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        this.logger.warn(`Config not found at ${path}: ${errorMessage}`);
+        return '';
       }
-      return Buffer.concat(chunks).toString('utf-8');
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      this.logger.warn(
-        `Config not found for ${team} in ${env} (branch: ${env}): ${errorMessage}`,
-      );
-      // Fallback to default template if not found
-      return '';
-    }
+    };
+
+    const [upstreams, locations] = await Promise.all([
+      getFileContent(PathUtil.getUpstreamPath(env, team)),
+      getFileContent(PathUtil.getProxyPath(env, team)),
+    ]);
+
+    return { upstreams, locations };
   }
 
-  async createPR(env: string, team: string, content: string): Promise<string> {
+  async createPR(
+    env: string,
+    team: string,
+    upstreams: string,
+    locations: string,
+  ): Promise<string> {
     const git = await this.getGitApi();
-    const repoId = process.env.ADO_REPO_ID || 'nginx-repo';
+    const repoName = process.env.ADO_REPO ?? '';
     const timestamp = Date.now();
     const branchName = `refs/heads/feature/config-update-${team}-${timestamp}`;
     const targetRefName = `refs/heads/main`;
 
-    // 1. Get Base Commit
+    // 1. Get Base Commit & Current Content for Diff
     const refs = await git.getRefs(
-      repoId,
-      '13ab4c56-8a75-401e-8356-c95092b24e76',
+      repoName,
+      process.env.ADO_PROJECT,
       targetRefName.replace('refs/', ''),
     );
     if (!refs || refs.length === 0) {
       throw new Error(`Target branch ${targetRefName} not found`);
     }
     const baseCommit = refs[0].objectId;
+
+    // Fetch current content to compare
+    const { upstreams: curUpstreams, locations: curLocations } =
+      await this.getConfigs(env, team);
+
+    const upstreamsChanged = curUpstreams !== upstreams;
+    const locationsChanged = curLocations !== locations;
+
+    if (!upstreamsChanged && !locationsChanged) {
+      throw new Error('No changes detected');
+    }
+
+    const changes: any[] = [];
+    if (upstreamsChanged) {
+      changes.push({
+        changeType: VersionControlChangeType.Edit,
+        item: {
+          path: PathUtil.getUpstreamPath(env, team),
+        },
+        newContent: {
+          content: upstreams,
+          contentType: ItemContentType.RawText,
+        },
+      });
+    }
+
+    if (locationsChanged) {
+      changes.push({
+        changeType: VersionControlChangeType.Edit,
+        item: {
+          path: PathUtil.getProxyPath(env, team),
+        },
+        newContent: {
+          content: locations,
+          contentType: ItemContentType.RawText,
+        },
+      });
+    }
 
     // 2. Create Branch
     const refUpdate: GitRefUpdate = {
@@ -117,11 +171,7 @@ export class AzureDevOpsService {
     };
 
     try {
-      await git.updateRefs(
-        [refUpdate],
-        repoId,
-        '13ab4c56-8a75-401e-8356-c95092b24e76',
-      );
+      await git.updateRefs([refUpdate], repoName, process.env.ADO_PROJECT);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -142,28 +192,13 @@ export class AzureDevOpsService {
       commits: [
         {
           comment: `Update config for ${team}`,
-          changes: [
-            {
-              changeType: VersionControlChangeType.Edit,
-              item: {
-                path: `nginx/${env}/${team}/nginx.conf`,
-              },
-              newContent: {
-                content: content,
-                contentType: ItemContentType.RawText,
-              },
-            },
-          ],
+          changes: changes,
         },
       ],
     };
 
     try {
-      await git.createPush(
-        push,
-        repoId,
-        '13ab4c56-8a75-401e-8356-c95092b24e76',
-      );
+      await git.createPush(push, repoName, process.env.ADO_PROJECT);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -183,8 +218,8 @@ export class AzureDevOpsService {
     try {
       const createdPr = await git.createPullRequest(
         pr,
-        repoId,
-        '13ab4c56-8a75-401e-8356-c95092b24e76',
+        repoName,
+        process.env.ADO_PROJECT,
       );
       return createdPr.pullRequestId?.toString() || '0';
     } catch (error: unknown) {

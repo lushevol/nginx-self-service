@@ -13,13 +13,22 @@ import { UpstreamsList } from "./UpstreamsList";
 import { LocationsList } from "./LocationsList";
 
 interface Props {
-  value: string;
-  onChange: (value: string) => void;
+  upstreams: string;
+  locations: string;
+  onUpstreamsChange: (value: string) => void;
+  onLocationsChange: (value: string) => void;
   team: string;
 }
 
-export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
+export const ConfigEditor: React.FC<Props> = ({
+  upstreams: upstreamsProp,
+  locations: locationsProp,
+  onUpstreamsChange,
+  onLocationsChange,
+  team,
+}) => {
   const [mode, setMode] = useState<"raw" | "wizard">("wizard");
+  const [rawTab, setRawTab] = useState<"upstreams" | "locations">("locations");
   const monaco = useMonaco();
 
   const {
@@ -38,7 +47,12 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
     addLocation,
     removeLocation,
     updateLocationPath,
-  } = useNginxConfig(value, onChange);
+  } = useNginxConfig(
+    upstreamsProp,
+    locationsProp,
+    onUpstreamsChange,
+    onLocationsChange
+  );
 
   useEffect(() => {
     if (monaco) {
@@ -71,7 +85,11 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
   }, [monaco]);
 
   const handleEditorChange = (val: string | undefined) => {
-    onChange(val || "");
+    if (rawTab === "upstreams") {
+      onUpstreamsChange(val || "");
+    } else {
+      onLocationsChange(val || "");
+    }
   };
 
   return (
@@ -112,16 +130,46 @@ export const ConfigEditor: React.FC<Props> = ({ value, onChange, team }) => {
       }
     >
       {mode === "raw" ? (
-        <Editor
-          height="600px"
-          language="nginx" // Use the ID we registered
-          value={value}
-          onChange={handleEditorChange}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: false },
-            padding: { top: 16 },
-          }}
+        <Tabs
+          type="card"
+          items={[
+            {
+              key: "locations",
+              label: "Locations (proxy.conf)",
+              children: (
+                <Editor
+                  height="600px"
+                  language="nginx"
+                  value={locationsProp}
+                  onChange={handleEditorChange}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    padding: { top: 16 },
+                  }}
+                />
+              ),
+            },
+            {
+              key: "upstreams",
+              label: "Upstreams (upstream.conf)",
+              children: (
+                <Editor
+                  height="600px"
+                  language="nginx"
+                  value={upstreamsProp}
+                  onChange={handleEditorChange}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    padding: { top: 16 },
+                  }}
+                />
+              ),
+            },
+          ]}
+          activeKey={rawTab}
+          onChange={(k) => setRawTab(k as "upstreams" | "locations")}
         />
       ) : (
         <div style={{ padding: 24 }}>

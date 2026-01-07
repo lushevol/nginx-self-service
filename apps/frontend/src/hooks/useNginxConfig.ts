@@ -8,20 +8,24 @@ import {
 } from "../utils/nginx";
 
 export const useNginxConfig = (
-  value: string,
-  onChange: (val: string) => void
+  upstreamsContent: string,
+  locationsContent: string,
+  onUpstreamsChange: (val: string) => void,
+  onLocationsChange: (val: string) => void
 ) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [upstreams, setUpstreams] = useState<Upstream[]>([]);
 
   // Sync Text -> Form
   useEffect(() => {
-    const { locs, upstrs } = parseConfig(value);
-
-    // eslint-disable-next-line
-    setLocations(locs);
+    const { upstrs } = parseConfig(upstreamsContent);
     setUpstreams(upstrs);
-  }, [value]);
+  }, [upstreamsContent]);
+
+  useEffect(() => {
+    const { locs } = parseConfig(locationsContent);
+    setLocations(locs);
+  }, [locationsContent]);
 
   const updateFromForm = (
     newLocations: Location[],
@@ -29,10 +33,13 @@ export const useNginxConfig = (
   ) => {
     setLocations(newLocations);
     setUpstreams(newUpstreams);
+
+    // Only update if changed slightly optimization or just direct
     const uStr = generateUpstreamsBlock(newUpstreams);
     const lStr = generateLocationsBlock(newLocations);
-    const fullConfig = uStr && lStr ? `${uStr}\n\n${lStr}` : uStr || lStr;
-    onChange(fullConfig);
+
+    onUpstreamsChange(uStr);
+    onLocationsChange(lStr);
   };
 
   const addDirective = (locIdx: number) => {

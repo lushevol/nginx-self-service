@@ -60,15 +60,14 @@ export class BackgroundWorkerService implements OnModuleInit {
 
   private async processChangeRequest(req: any) {
     try {
-      const combined = `${req.upstreamsConfig}\n${req.locationsConfig}`;
-
       // Re-use createPullRequest from NginxConfigService (or AdoService directly)
       // Since NginxConfigService calls validate + createPR, and we already validated on entry,
       // we can skip validation here or safe to do it again.
       const result = await this.configService.createPullRequest(
         req.team,
         req.environment,
-        combined,
+        req.upstreamsConfig,
+        req.locationsConfig,
       );
 
       const prIdMatch = result.prUrl.match(/pullrequest\/(\d+)/);
