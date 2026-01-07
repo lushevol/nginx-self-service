@@ -22,7 +22,12 @@ export class AzureDevOpsService {
     const orgUrl = process.env.ADO_ORG_URL || 'https://dev.azure.com/myorg';
     const token = process.env.ADO_PAT || '';
     const authHandler = getPersonalAccessTokenHandler(token);
-    this.connection = new WebApi(orgUrl, authHandler, { ignoreSslError: true });
+    this.connection = new WebApi(orgUrl, authHandler, {
+      ignoreSslError: true,
+      ...(process.env.PROXY_URL
+        ? { proxy: { proxyUrl: process.env.PROXY_URL } }
+        : {}),
+    });
   }
 
   private async getGitApi(): Promise<IGitApi> {
