@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { SyntaxValidator } from './syntax.validator';
 
 describe('SyntaxValidator', () => {
@@ -48,5 +48,16 @@ describe('SyntaxValidator', () => {
     const badBlock = 'server {';
     const result = await validator.validate(badBlock);
     expect(result).toBeDefined();
+  });
+
+  it('should pass for least_conn in upstream', async () => {
+    const validUpstream = `
+      upstream backend {
+        least_conn;
+        server 127.0.0.1:8080;
+      }
+    `;
+    const result = await validator.validate(validUpstream);
+    expect(result).toBeNull();
   });
 });

@@ -50,6 +50,7 @@ const ALLOWED_DIRECTIVES = new Set([
   'set_real_ip_from',
   'allow',
   'deny',
+  'least_conn',
 ]);
 
 @Injectable()
@@ -89,7 +90,10 @@ export class SyntaxValidator {
       }
 
       // Check for valid directive
-      const directive = line.split(/\s+/)[0];
+      let directive = line.split(/\s+/)[0];
+      if (directive.endsWith(';')) {
+        directive = directive.slice(0, -1);
+      }
       if (!ALLOWED_DIRECTIVES.has(directive)) {
         return `Syntax Error: Unknown directive "${directive}" at line ${i + 1}. Did you mean something else?`;
       }
