@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Editor, { useMonaco } from "@monaco-editor/react";
+import { DiffEditor, useMonaco } from "@monaco-editor/react";
 import { Button, Tabs, Space, Card, Typography } from "antd";
 import {
   ThunderboltOutlined,
@@ -18,6 +18,8 @@ interface Props {
   onUpstreamsChange: (value: string) => void;
   onLocationsChange: (value: string) => void;
   team: string;
+  originalUpstreams: string;
+  originalLocations: string;
 }
 
 export const ConfigEditor: React.FC<Props> = ({
@@ -26,6 +28,8 @@ export const ConfigEditor: React.FC<Props> = ({
   onUpstreamsChange,
   onLocationsChange,
   team,
+  originalUpstreams,
+  originalLocations,
 }) => {
   const [mode, setMode] = useState<"raw" | "wizard">("wizard");
   const [rawTab, setRawTab] = useState<"upstreams" | "locations">("locations");
@@ -84,14 +88,6 @@ export const ConfigEditor: React.FC<Props> = ({
     }
   }, [monaco]);
 
-  const handleEditorChange = (val: string | undefined) => {
-    if (rawTab === "upstreams") {
-      onUpstreamsChange(val || "");
-    } else {
-      onLocationsChange(val || "");
-    }
-  };
-
   return (
     <Card
       title={
@@ -137,15 +133,17 @@ export const ConfigEditor: React.FC<Props> = ({
               key: "locations",
               label: "Locations (proxy.conf)",
               children: (
-                <Editor
+                <DiffEditor
                   height="600px"
                   language="nginx"
-                  value={locationsProp}
-                  onChange={handleEditorChange}
+                  original={originalLocations}
+                  modified={locationsProp}
                   theme="vs-dark"
                   options={{
+                    readOnly: true,
                     minimap: { enabled: false },
                     padding: { top: 16 },
+                    renderSideBySide: false,
                   }}
                 />
               ),
@@ -154,15 +152,17 @@ export const ConfigEditor: React.FC<Props> = ({
               key: "upstreams",
               label: "Upstreams (upstream.conf)",
               children: (
-                <Editor
+                <DiffEditor
                   height="600px"
                   language="nginx"
-                  value={upstreamsProp}
-                  onChange={handleEditorChange}
+                  original={originalUpstreams}
+                  modified={upstreamsProp}
                   theme="vs-dark"
                   options={{
+                    readOnly: true,
                     minimap: { enabled: false },
                     padding: { top: 16 },
+                    renderSideBySide: false,
                   }}
                 />
               ),

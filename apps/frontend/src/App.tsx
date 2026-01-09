@@ -13,6 +13,8 @@ const App = () => {
   const [env, setEnv] = useState("dev");
   const [upstreams, setUpstreams] = useState("");
   const [locations, setLocations] = useState("");
+  const [originalUpstreams, setOriginalUpstreams] = useState("");
+  const [originalLocations, setOriginalLocations] = useState("");
   const [loading, setLoading] = useState(false);
   const [prUrl, setPrUrl] = useState<string | null>(null);
 
@@ -37,6 +39,8 @@ const App = () => {
       const res = await axios.get(`/api/nginx/${t}/${e}`);
       setUpstreams(res.data.upstreams || "");
       setLocations(res.data.locations || "");
+      setOriginalUpstreams(res.data.upstreams || "");
+      setOriginalLocations(res.data.locations || "");
       message.success(`Loaded config for ${t} [${e}]`);
     } catch {
       message.error("Failed to load config");
@@ -151,6 +155,8 @@ const App = () => {
         <ConfigEditor
           upstreams={upstreams}
           locations={locations}
+          originalUpstreams={originalUpstreams}
+          originalLocations={originalLocations}
           onUpstreamsChange={setUpstreams}
           onLocationsChange={setLocations}
           team={team}
