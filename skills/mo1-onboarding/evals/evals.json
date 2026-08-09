@@ -1,0 +1,60 @@
+{
+  "skill_name": "mo1-onboarding",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We are onboarding a brand new MO1 interface for SSDR with three tiles. Two new upstream ports are needed for UI and API. We already have draft nginx config, OLA approval emails, and a code screenshot showing the base service is used for API calls. Draft the MO1 change request, list the mandatory checklist items, and tell me the missing evidence that would still block UAT and prod.",
+      "expected_output": "A complete change-request draft plus a checklist assessment that requires architecture and PO approval, connectivity evidence, user counts, UVT users, UAT sign-off, and any missing prod readiness items.",
+      "files": [
+        "confluences/[Template] Markets Operations One Change Request/page.md",
+        "confluences/Admin Module Release Checklist Template/page.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our team already has an interface on Post Trade Portal and now wants to add two new tiles for existing users only. No new upstream ports are involved. Tell me which onboarding steps still apply, which new-interface steps can be skipped, and what evidence we need before we ask Ratan to release.",
+      "expected_output": "A scoped checklist for new tiles on an existing interface, skipping full new-interface-only requirements while retaining tile metadata, target user profile and counts, entitlement, UAT, release review, and any relevant nginx or prod checks.",
+      "files": [
+        "confluences/[Template] Markets Operations One Change Request/page.md",
+        "confluences/Admin Module Release Checklist Template/page.md",
+        "confluences/Admin Module Release Checklist Template/attachments/FW UAT for SSDR MFE on report downlaod part - UAT Signoff.msg"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Please review this MO1 onboarding pack for prod readiness: nginx PR link, UAT sign-off email, OLA approval screenshots, entitlement screenshots, target user counts, UVT user names, and portal and app go-live dates. I want a blocker-only summary grouped by Tenant Team, Ratan Team, EMS2 Team, and PSS Team.",
+      "expected_output": "A blocker-only readiness review that maps the evidence to the release checklist, identifies missing mandatory controls, groups next actions by owner, and does not expand into a full field-by-field change-request rewrite.",
+      "files": [
+        "confluences/[Template] Markets Operations One Change Request/page.md",
+        "confluences/Admin Module Release Checklist Template/page.md",
+        "confluences/Admin Module Release Checklist Template/attachments/FW UAT for SSDR MFE on report downlaod part - UAT Signoff.msg"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "We need to retire one existing tile from Admin Module as part of an MO1 cleanup. Review the change approach and tell me whether deleting the record is acceptable, what should be done instead if not, and what evidence or approvals are still needed before release.",
+      "expected_output": "A modification-focused answer that preserves the deactivate-not-delete rule, identifies any release controls that still apply, and avoids turning the request into a full new-interface onboarding flow.",
+      "files": [
+        "confluences/Admin Module Release Checklist Template/page.md"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I have almost finished a formal MO1 onboarding pack and want a ready-to-submit checklist. Make sure I do not miss any process steps outside the technical evidence itself, especially anything around release calendar handling or notifying the MO1 team.",
+      "expected_output": "A submission-oriented checklist that explicitly includes the dedicated release-calendar request and MO1-team notification along with the technical onboarding evidence.",
+      "files": [
+        "confluences/[Template] Markets Operations One Change Request/page.md",
+        "confluences/Admin Module Release Checklist Template/page.md"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Our team already has an MO1 interface and wants to add one more tile. This tile introduces a new upstream API and a small set of new users. Tell me what extra evidence is now required, and be careful not to treat this like full new-interface onboarding if architecture or PO approval would not actually be mandatory.",
+      "expected_output": "A new-tile assessment that adds OLA, target user profile and counts, and connectivity or firewall evidence because of the new users and upstream, while keeping architecture and PO approval scoped out unless the request is actually a new interface.",
+      "files": [
+        "confluences/[Template] Markets Operations One Change Request/page.md",
+        "confluences/Admin Module Release Checklist Template/page.md"
+      ]
+    }
+  ]
+}

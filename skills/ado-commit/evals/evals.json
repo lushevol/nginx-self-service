@@ -1,0 +1,71 @@
+{
+  "skill_name": "ado-commit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Commit my staged changes with the company workflow. The current branch is feature/ratan-portal-51358-fix-proxy. Use the branch name to derive the ADO ID and produce the commit message and push decision.",
+      "expected_output": "The workflow extracts ADO ID 51358 from the branch name even though the number is not the final token, drafts a #51358 commit header, uses sc-cli git commit, and attempts sc-cli git push even though the user did not mention push explicitly because a real commit request uses the standard push follow-up.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Commit the staged changes. The current branch is develop and I have not given you an ADO work item ID yet. Follow the company workflow.",
+      "expected_output": "The workflow recognizes develop as a protected branch, asks the user to input an ADO work item ID before creating a new working branch, and stops before commit or push until that input is available.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Commit the staged changes. The branch name is feature/reconcile-999-ops-cleanup and recent commits do not have first lines starting with '#'. Decide whether you can proceed.",
+      "expected_output": "The workflow rejects 999 as not feasible for an ADO ID and asks the user to input the correct ADO work item ID before commit or push.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Commit and push these staged changes. The current branch is feature/ratan-51358-hotfix-48211. Decide the ADO ID and continue if the workflow allows it.",
+      "expected_output": "The workflow detects multiple feasible ADO ID candidates in the branch name, refuses to guess between 51358 and 48211, and asks the user to confirm which ADO ID to use before commit or push.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Commit and push the staged changes. The current branch is main, and I want to use ADO work item 62017. Continue with the company workflow.",
+      "expected_output": "The workflow prefers the explicit ADO work item ID 62017, creates a new working branch from main using that identifier, drafts a #62017 commit header, and proceeds with sc-cli git commit followed by sc-cli git push because the user asked to commit and push.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Commit the staged changes. The current branch is feature/ratan-portal-51358-fix-proxy, but use ADO work item 62017 because that is the ticket I want on this commit.",
+      "expected_output": "The workflow prefers the explicit user-provided ADO work item ID 62017 over the feasible branch candidate 51358, drafts a #62017 commit header, does not fall back to branch-name or history inference, and attempts sc-cli git push after the successful commit because the user requested a real commit.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Generate the commit message only. The branch name is docs/cleanup-guides and has no feasible number, and I do not want to provide an ADO ID. Please infer it from history if you can. Recent commit history includes a first line '#48211 docs: refresh onboarding notes'.",
+      "expected_output": "The workflow only considers history because the user asked it to infer the ID, finds exactly one clear recent #ado_id header, reuses ADO ID 48211, and returns a message-only result without attempting commit or push.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Generate the commit message only. The branch name is docs/cleanup-guides and has no feasible number, and I do not want to provide an ADO ID. Please infer it from history if you can. Recent commit history includes first lines '#48211 docs: refresh onboarding notes' and '#51358 docs: update ratan skill wording'. Decide whether you can reuse an ADO ID.",
+      "expected_output": "The workflow only considers history because the user asked it to infer the ID, detects multiple different #ado_id headers, treats the result as ambiguous, and asks the user which ADO ID to use instead of guessing.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Commit the staged changes, but do not push yet. The current branch is feature/ratan-portal-51358-fix-proxy.",
+      "expected_output": "The workflow treats the explicit 'do not push' instruction as an override to the default company flow, drafts a #51358 commit header from the branch name, uses sc-cli git commit, and stops without attempting sc-cli git push.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Commit the staged changes. The branch name is docs/cleanup-guides and has no feasible number. I do not want to provide an ADO work item ID, but there is one clear recent commit with first line '#48211 docs: refresh onboarding notes'. Decide whether you can proceed.",
+      "expected_output": "Because this is a real commit request and the user did not explicitly ask the workflow to infer the ADO ID from history, the workflow does not reuse #48211 automatically and instead asks the user to provide the intended ADO work item ID before commit or push.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Commit the staged changes with the company workflow. The current branch is feature/ratan-portal-51358-fix-proxy. The branch has no configured upstream, origin exists and is the standard publish remote for this repo, and the first push fails only because tracking configuration is missing.",
+      "expected_output": "The workflow drafts a #51358 commit header from the branch name, uses sc-cli git commit, validates origin as the publish remote, attempts sc-cli git push after the successful commit, and retries with an explicit upstream-setting sc-cli git push variant because the only failure is missing tracking configuration.",
+      "files": []
+    }
+  ]
+}

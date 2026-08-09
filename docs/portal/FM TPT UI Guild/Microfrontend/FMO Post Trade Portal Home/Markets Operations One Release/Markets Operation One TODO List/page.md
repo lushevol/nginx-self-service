@@ -1,0 +1,4 @@
+- [ ] Upgrade foundation for central monitoring.
+- [ ] Upgrade spring boot to latest 4.0.6
+- [ ] Migrate properties to services from ratan-service-properties.
+- [ ] Remove account/password login
